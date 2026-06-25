@@ -8,24 +8,24 @@ const DEFAULT_ORDER = ["mon","tue","wed","thu","fri","sat","sun"];
 const WORKOUTS: Record<string, {focus:string,brief:string,metrics:{id:string,label:string,unit:string}[]}> = {
   mon: {
     focus: "Chest & Shoulders",
-    brief: "1-mi warm-up mandatory. Bench → 20 burpee broad jumps → chest flys → military press 3× heavy → wall ball burnout: 50 pro, drop to men's, drop to women's. Sled treadmill 3 min. 1-mi cool-down.",
+    brief: "1-mi warm-up mandatory. Bench -> 20 burpee broad jumps -> chest flys -> military press 3x heavy -> wall ball burnout: 50 pro, drop to men's, drop to women's. Sled treadmill 3 min. 1-mi cool-down.",
     metrics: [
       {id:"burpee",label:"Burpee broad jumps",unit:"reps (goal: 20)"},
-      {id:"wb-pro",label:"Wall balls — pro weight",unit:"reps"},
-      {id:"wb-men",label:"Wall balls — men's weight",unit:"reps"},
-      {id:"wb-wom",label:"Wall balls — women's weight",unit:"reps"},
+      {id:"wb-pro",label:"Wall balls - pro weight",unit:"reps"},
+      {id:"wb-men",label:"Wall balls - men's weight",unit:"reps"},
+      {id:"wb-wom",label:"Wall balls - women's weight",unit:"reps"},
       {id:"mon-mi",label:"Miles run",unit:"mi"},
     ]
   },
   tue: {
     focus: "Run + Arms",
-    brief: "400m @ goal race pace, 60-sec walk, repeat for 8km. Stop if you miss 2 in a row. Must feel smooth.",
+    brief: "400m at goal race pace, 60-sec walk, repeat for 8km. Stop if you miss 2 in a row. Must feel smooth.",
     metrics: [{id:"tue-mi",label:"Miles run",unit:"mi"}]
   },
   wed: { focus: "Off", brief: "Rest day.", metrics: [] },
   thu: {
     focus: "Back & Traps",
-    brief: "1-mi warm-up. Deadlift: 2 warm-up + 2 heavy sets. Reverse lunges: 135 lbs, 2×15 each leg. Walking lunges 100m/200 steps. Pulldowns + heavy rows. Toes-to-bar 3×8-10. 1km row. 1-mi cool-down.",
+    brief: "1-mi warm-up. Deadlift: 2 warm-up + 2 heavy sets. Reverse lunges: 135 lbs, 2x15 each leg. Walking lunges 100m/200 steps. Pulldowns + heavy rows. Toes-to-bar 3x8-10. 1km row. 1-mi cool-down.",
     metrics: [
       {id:"lunges",label:"Walking lunges completed",unit:"steps of 200"},
       {id:"thu-mi",label:"Miles run",unit:"mi"},
@@ -66,6 +66,30 @@ function weekLabel(offset: number) {
   return f(d) + " - " + f(end);
 }
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+async function loadFromDB(week: string) {
+  const res = await fetch(SUPABASE_URL + "/rest/v1/training_weeks?week_start=eq." + week + "&select=data", {
+    headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY }
+  });
+  const rows = await res.json();
+  return rows?.[0]?.data || null;
+}
+
+async function saveToDB(week: string, data: unknown) {
+  await fetch(SUPABASE_URL + "/rest/v1/training_weeks", {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: "Bearer " + SUPABASE_KEY,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates",
+    },
+    body: JSON.stringify({ week_start: week, data }),
+  });
+}
+
 export default function Home() {
   const router = useRouter();
   const [offset, setOffset] = useState(0);
@@ -76,30 +100,33 @@ export default function Home() {
   const [dragFrom, setDragFrom] = useState<number|null>(null);
   const [dragOver, setDragOver] = useState<number|null>(null);
   const [toast, setToast] = useState("");
+  const [saving, setSaving] = useState(false);
   const saveRef = useRef<ReturnType<typeof setTimeout>|null>(null);
-  const storageKey = "hyrox_" + weekStart(offset);
+  const week = weekStart(offset);
 
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      const d = JSON.parse(saved);
-      setOrder(d.order || [...DEFAULT_ORDER]);
-      setStatus(d.status || {});
-      setMetrics(d.metrics || {});
-    } else {
-      setOrder([...DEFAULT_ORDER]);
-      setStatus({});
-      setMetrics({});
-    }
-    setOpen(null);
-  }, [storageKey]);
+    loadFromDB(week).then(d => {
+      if (d) {
+        setOrder(d.order || [...DEFAULT_ORDER]);
+        setStatus(d.status || {});
+        setMetrics(d.metrics || {});
+      } else {
+        setOrder([...DEFAULT_ORDER]);
+        setStatus({});
+        setMetrics({});
+      }
+      setOpen(null);
+    });
+  }, [week]);
 
   const save = useCallback((o: string[], s: Record<string,string>, m: Record<string,Record<string,string>>) => {
     if (saveRef.current) clearTimeout(saveRef.current);
-    saveRef.current = setTimeout(() => {
-      localStorage.setItem(storageKey, JSON.stringify({order:o,status:s,metrics:m}));
-    }, 400);
-  }, [storageKey]);
+    setSaving(true);
+    saveRef.current = setTimeout(async () => {
+      await saveToDB(week, {order:o,status:s,metrics:m});
+      setSaving(false);
+    }, 600);
+  }, [week]);
 
   function toggleStatus(id: string, val: string) {
     const next = {...status, [id]: status[id] === val ? "" : val};
@@ -158,14 +185,15 @@ export default function Home() {
           <span style={{color:"#333",fontSize:"11px",marginLeft:"8px",textTransform:"uppercase"}}> / Training Log</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-          <button onClick={()=>setOffset(o=>o-1)} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid #2a2a2a",background:"none",color:"#888",cursor:"pointer",fontSize:"14px"}}>←</button>
-          <span style={{color:"#888",fontSize:"11px",fontFamily:"monospace",minWidth:"160px",textAlign:"center"}}>{weekLabel(offset)}</span>
-          <button onClick={()=>setOffset(o=>o+1)} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid #2a2a2a",background:"none",color:"#888",cursor:"pointer",fontSize:"14px"}}>→</button>
+          <button onClick={()=>setOffset(o=>o-1)} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid #2a2a2a",background:"none",color:"#555",cursor:"pointer",fontSize:"14px"}}>←</button>
+          <span style={{color:"#555",fontSize:"11px",fontFamily:"monospace",minWidth:"160px",textAlign:"center"}}>{weekLabel(offset)}</span>
+          <button onClick={()=>setOffset(o=>o+1)} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid #2a2a2a",background:"none",color:"#555",cursor:"pointer",fontSize:"14px"}}>→</button>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-          <span style={{fontSize:"11px",fontFamily:"monospace",padding:"4px 10px",borderRadius:"20px",border:"1px solid " + (totalMiles>=20?"#e8ff00":"#2a2a2a"),color:totalMiles>=20?"#e8ff00":"#888"}}>
+          <span style={{fontSize:"11px",fontFamily:"monospace",padding:"4px 10px",borderRadius:"20px",border:"1px solid " + (totalMiles>=20?"#e8ff00":"#2a2a2a"),color:totalMiles>=20?"#e8ff00":"#555"}}>
             {totalMiles.toFixed(1)} / 20 mi
           </span>
+          {saving && <span style={{fontSize:"10px",color:"#333"}}>saving...</span>}
           <button onClick={signOut} style={{background:"none",border:"none",color:"#333",fontSize:"11px",cursor:"pointer"}}>Sign out</button>
         </div>
       </div>
@@ -209,15 +237,15 @@ export default function Home() {
                       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:"8px"}}>
                         {w.metrics.map(m=>(
                           <div key={m.id} style={{background:"#0a0a0a",border:"1px solid #1e1e1e",borderRadius:"8px",padding:"12px"}}>
-                            <div style={{fontSize:"9px",color:"#444",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:"8px"}}>{m.label}</div>
+                            <div style={{fontSize:"9px",color:"#888",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:"8px"}}>{m.label}</div>
                             <input type="number" placeholder="0" value={getMetric(dayId,m.id)}
                               onChange={e=>setMetric(dayId,m.id,e.target.value)}
                               style={{width:"100%",background:"none",border:"none",color:"white",fontSize:"20px",fontWeight:700,fontFamily:"monospace",outline:"none",padding:0}} />
-                            <div style={{fontSize:"9px",color:"#333",marginTop:"4px"}}>{m.unit}</div>
+                            <div style={{fontSize:"9px",color:"#888",marginTop:"4px"}}>{m.unit}</div>
                           </div>
                         ))}
                       </div>
-                    ) : <div style={{fontSize:"11px",color:"#333"}}>No metrics today.</div>}
+                    ) : <div style={{fontSize:"11px",color:"#555"}}>No metrics today.</div>}
                   </div>
                 )}
               </div>
