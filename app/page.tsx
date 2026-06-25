@@ -78,13 +78,19 @@ async function loadFromDB(week: string) {
 }
 
 async function saveToDB(week: string, data: unknown) {
+  await fetch(SUPABASE_URL + "/rest/v1/training_weeks?week_start=eq." + week, {
+    method: "DELETE",
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: "Bearer " + SUPABASE_KEY,
+    },
+  });
   await fetch(SUPABASE_URL + "/rest/v1/training_weeks", {
     method: "POST",
     headers: {
       apikey: SUPABASE_KEY,
       Authorization: "Bearer " + SUPABASE_KEY,
       "Content-Type": "application/json",
-      Prefer: "resolution=merge-duplicates",
     },
     body: JSON.stringify({ week_start: week, data }),
   });
