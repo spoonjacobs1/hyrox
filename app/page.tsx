@@ -120,4 +120,140 @@ export default function Home() {
     const next = [...order];
     const [moved] = next.splice(dragFrom, 1);
     next.splice(toIdx, 0, moved);
-    setOrder(next); save(next, status,
+    setOrder(next); save(next, status, metrics);
+    setDragFrom(null); setDragOver(null);
+  }
+
+  const totalMiles = [["mon","mon-mi"],["tue","tue-mi"],["thu","thu-mi"],["fri","fri-mi"],["sun","sun-mi"]]
+    .reduce((s,[d,m]) => { const v = parseFloat(getMetric(d,m)); return s + (isNaN(v)?0:v); }, 0);
+
+  function signOut() {
+    document.cookie = "auth=; path=/; max-age=0";
+    router.push("/login");
+  }
+
+  async function copyKenny() {
+    const text = [
+      "Hyrox Log - " + weekLabel(offset),
+      "",
+      "Mon - burpee broad jumps: " + (getMetric("mon","burpee")||"—") + " reps",
+      "Mon - wall balls (pro): " + (getMetric("mon","wb-pro")||"—") + " reps",
+      "Mon - wall balls (men's): " + (getMetric("mon","wb-men")||"—") + " reps",
+      "Mon - wall balls (women's): " + (getMetric("mon","wb-wom")||"—") + " reps",
+      "Thu - walking lunges of 200: " + (getMetric("thu","lunges")||"—") + " steps",
+      "Fri - miles run: " + (getMetric("fri","fri-mi")||"—") + " mi",
+      "Sun - miles run: " + (getMetric("sun","sun-mi")||"—") + " mi",
+      "Sun - total minutes: " + (getMetric("sun","sun-min")||"—") + " min",
+      "Weekly total: " + totalMiles.toFixed(1) + " mi",
+    ].join("\n");
+    await navigator.clipboard.writeText(text);
+    setToast("Copied"); setTimeout(()=>setToast(""),2000);
+  }
+
+  return (
+    <div style={{minHeight:"100vh",background:"#0a0a0a"}}>
+      <div style={{position:"sticky",top:0,zIndex:50,borderBottom:"1px solid #1e1e1e",background:"#0a0a0a",padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px",flexWrap:"wrap"}}>
+        <div>
+          <span style={{color:"#e8ff00",fontSize:"11px",fontWeight:700,letterSpacing:"0.18em",textTransform:"uppercase"}}>Station 8</span>
+          <span style={{color:"#333",fontSize:"11px",marginLeft:"8px",textTransform:"uppercase"}}> / Training Log</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+          <button onClick={()=>setOffset(o=>o-1)} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid #2a2a2a",background:"none",color:"#555",cursor:"pointer",fontSize:"14px"}}>←</button>
+          <span style={{color:"#555",fontSize:"11px",fontFamily:"monospace",minWidth:"160px",textAlign:"center"}}>{weekLabel(offset)}</span>
+          <button onClick={()=>setOffset(o=>o+1)} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid #2a2a2a",background:"none",color:"#555",cursor:"pointer",fontSize:"14px"}}>→</button>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+          <span style={{fontSize:"11px",fontFamily:"monospace",padding:"4px 10px",borderRadius:"20px",border:"1px solid " + (totalMiles>=20?"#e8ff00":"#2a2a2a"),color:totalMiles>=20?"#e8ff00":"#555"}}>
+            {totalMiles.toFixed(1)} / 20 mi
+          </span>
+          <button onClick={signOut} style={{background:"none",border:"none",color:"#333",fontSize:"11px",cursor:"pointer"}}>Sign out</button>
+        </div>
+      </div>
+
+      <div style={{maxWidth:"700px",margin:"0 auto",padding:"20px 16px 80px"}}>
+        <div style={{textAlign:"right",fontSize:"10px",color:"#333",marginBottom:"12px",textTransform:"uppercase"}}>drag to reorder</div>
+        <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+          {order.map((dayId, idx) => {
+            const w = WORKOUTS[dayId];
+            if (!w) return null;
+            const st = status[dayId];
+            const isOpen = open === dayId;
+            return (
+              <div key={dayId} draggable
+                onDragStart={()=>setDragFrom(idx)}
+                onDragOver={e=>{e.preventDefault();setDragOver(idx);}}
+                onDrop={()=>drop(idx)}
+                onDragEnd={()=>{setDragFrom(null);setDragOver(null);}}
+                style={{background:"#141414",border:"1px solid " + (dragOver===idx?"#e8ff00":"#1e1e1e"),borderLeft:"3px solid " + (st==="done"?"#22c55e":st==="missed"?"#ef4444":"#1e1e1e"),borderRadius:"10px",opacity:dragFrom===idx?0.3:1}}>
+                <div onClick={()=>setOpen(isOpen?null:dayId)}
+                  style={{display:"flex",alignItems:"center",gap:"12px",padding:"14px 16px",cursor:"pointer",userSelect:"none"}}>
+                  <span style={{color:"#333",cursor:"grab",fontSize:"15px",flexShrink:0}} onClick={e=>e.stopPropagation()}>☰</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:"13px",fontWeight:600,color:"white"}}>{DAYS[idx]}</div>
+                    <div style={{fontSize:"11px",color:"#c8dc00",marginTop:"2px"}}>{w.focus}</div>
+                  </div>
+                  <div style={{display:"flex",gap:"6px",flexShrink:0}} onClick={e=>e.stopPropagation()}>
+                    {["done","missed"].map(v=>(
+                      <button key={v} onClick={()=>toggleStatus(dayId,v)}
+                        style={{fontSize:"10px",padding:"3px 10px",borderRadius:"20px",border:"1px solid " + (st===v?(v==="done"?"#22c55e":"#ef4444"):"#2a2a2a"),background:st===v?(v==="done"?"rgba(34,197,94,0.1)":"rgba(239,68,68,0.1)"):"none",color:st===v?(v==="done"?"#22c55e":"#ef4444"):"#444",cursor:"pointer",textTransform:"uppercase"}}>
+                        {v==="done"?"Done":"Missed"}
+                      </button>
+                    ))}
+                  </div>
+                  <span style={{color:"#333",fontSize:"11px",display:"inline-block",transform:isOpen?"rotate(180deg)":"none",transition:"transform 0.2s",flexShrink:0}}>▾</span>
+                </div>
+                {isOpen && (
+                  <div style={{padding:"0 16px 16px",borderTop:"1px solid #1e1e1e"}}>
+                    <p style={{fontSize:"12px",color:"#555",lineHeight:"1.65",padding:"12px 0",borderBottom:"1px solid #1e1e1e",marginBottom:"14px"}}>{w.brief}</p>
+                    {w.metrics.length > 0 ? (
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:"8px"}}>
+                        {w.metrics.map(m=>(
+                          <div key={m.id} style={{background:"#0a0a0a",border:"1px solid #1e1e1e",borderRadius:"8px",padding:"12px"}}>
+                            <div style={{fontSize:"9px",color:"#444",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:"8px"}}>{m.label}</div>
+                            <input type="number" placeholder="0" value={getMetric(dayId,m.id)}
+                              onChange={e=>setMetric(dayId,m.id,e.target.value)}
+                              style={{width:"100%",background:"none",border:"none",color:"white",fontSize:"20px",fontWeight:700,fontFamily:"monospace",outline:"none",padding:0}} />
+                            <div style={{fontSize:"9px",color:"#333",marginTop:"4px"}}>{m.unit}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : <div style={{fontSize:"11px",color:"#333"}}>No metrics today.</div>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{marginTop:"32px",border:"1px solid #1e1e1e",borderRadius:"10px",overflow:"hidden"}}>
+          <div style={{background:"rgba(232,255,0,0.05)",borderBottom:"1px solid #1e1e1e",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <span style={{fontSize:"10px",color:"#c8dc00",fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase"}}>Report to Kenny</span>
+            <button onClick={copyKenny} style={{fontSize:"10px",padding:"4px 10px",borderRadius:"5px",border:"1px solid #c8dc00",background:"none",color:"#c8dc00",cursor:"pointer",textTransform:"uppercase"}}>Copy</button>
+          </div>
+          {[
+            ["Mon - burpee broad jumps", getMetric("mon","burpee"), "reps"],
+            ["Mon - wall balls (pro)", getMetric("mon","wb-pro"), "reps"],
+            ["Mon - wall balls (men's)", getMetric("mon","wb-men"), "reps"],
+            ["Mon - wall balls (women's)", getMetric("mon","wb-wom"), "reps"],
+            ["Thu - walking lunges of 200", getMetric("thu","lunges"), "steps"],
+            ["Fri - miles run", getMetric("fri","fri-mi"), "mi"],
+            ["Sun - miles run", getMetric("sun","sun-mi"), "mi"],
+            ["Sun - total minutes", getMetric("sun","sun-min"), "min"],
+            ["Weekly total miles", totalMiles>0?totalMiles.toFixed(1):"", "mi"],
+          ].map(([k,v,u])=>(
+            <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 16px",borderBottom:"1px solid #1a1a1a"}}>
+              <span style={{fontSize:"11px",color:"#555"}}>{k}</span>
+              <span style={{fontSize:"12px",fontFamily:"monospace",fontWeight:600,color:v?"white":"#2a2a2a"}}>{v?v+" "+u:"—"}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {toast && (
+        <div style={{position:"fixed",bottom:"24px",left:"50%",transform:"translateX(-50%)",background:"#e8ff00",color:"black",fontSize:"12px",fontWeight:700,padding:"8px 20px",borderRadius:"20px"}}>
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}
