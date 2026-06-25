@@ -158,12 +158,12 @@ export default function Home() {
           <span style={{color:"#333",fontSize:"11px",marginLeft:"8px",textTransform:"uppercase"}}> / Training Log</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-          <button onClick={()=>setOffset(o=>o-1)} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid #2a2a2a",background:"none",color:"#555",cursor:"pointer",fontSize:"14px"}}>←</button>
-          <span style={{color:"#555",fontSize:"11px",fontFamily:"monospace",minWidth:"160px",textAlign:"center"}}>{weekLabel(offset)}</span>
-          <button onClick={()=>setOffset(o=>o+1)} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid #2a2a2a",background:"none",color:"#555",cursor:"pointer",fontSize:"14px"}}>→</button>
+          <button onClick={()=>setOffset(o=>o-1)} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid #2a2a2a",background:"none",color:"#888",cursor:"pointer",fontSize:"14px"}}>←</button>
+          <span style={{color:"#888",fontSize:"11px",fontFamily:"monospace",minWidth:"160px",textAlign:"center"}}>{weekLabel(offset)}</span>
+          <button onClick={()=>setOffset(o=>o+1)} style={{width:"28px",height:"28px",borderRadius:"6px",border:"1px solid #2a2a2a",background:"none",color:"#888",cursor:"pointer",fontSize:"14px"}}>→</button>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
-          <span style={{fontSize:"11px",fontFamily:"monospace",padding:"4px 10px",borderRadius:"20px",border:"1px solid " + (totalMiles>=20?"#e8ff00":"#2a2a2a"),color:totalMiles>=20?"#e8ff00":"#555"}}>
+          <span style={{fontSize:"11px",fontFamily:"monospace",padding:"4px 10px",borderRadius:"20px",border:"1px solid " + (totalMiles>=20?"#e8ff00":"#2a2a2a"),color:totalMiles>=20?"#e8ff00":"#888"}}>
             {totalMiles.toFixed(1)} / 20 mi
           </span>
           <button onClick={signOut} style={{background:"none",border:"none",color:"#333",fontSize:"11px",cursor:"pointer"}}>Sign out</button>
@@ -204,7 +204,7 @@ export default function Home() {
                 </div>
                 {isOpen && (
                   <div style={{padding:"0 16px 16px",borderTop:"1px solid #1e1e1e"}}>
-                    <p style={{fontSize:"12px",color:"#555",lineHeight:"1.65",padding:"12px 0",borderBottom:"1px solid #1e1e1e",marginBottom:"14px"}}>{w.brief}</p>
+                    <p style={{fontSize:"12px",color:"#888",lineHeight:"1.65",padding:"12px 0",borderBottom:"1px solid #1e1e1e",marginBottom:"14px"}}>{w.brief}</p>
                     {w.metrics.length > 0 ? (
                       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:"8px"}}>
                         {w.metrics.map(m=>(
@@ -242,7 +242,7 @@ export default function Home() {
             ["Weekly total miles", totalMiles>0?totalMiles.toFixed(1):"", "mi"],
           ].map(([k,v,u])=>(
             <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 16px",borderBottom:"1px solid #1a1a1a"}}>
-              <span style={{fontSize:"11px",color:"#555"}}>{k}</span>
+              <span style={{fontSize:"11px",color:"#888"}}>{k}</span>
               <span style={{fontSize:"12px",fontFamily:"monospace",fontWeight:600,color:v?"white":"#2a2a2a"}}>{v?v+" "+u:"—"}</span>
             </div>
           ))}
