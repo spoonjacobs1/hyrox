@@ -53,9 +53,9 @@ const WORKOUTS: Record<string, {focus:string,brief:string,metrics:{id:string,lab
 function weekStart(offset: number) {
   const d = new Date();
   const day = d.getDay();
-  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1) + offset * 7);
-  d.setHours(0,0,0,0);
-  return d.toISOString().split("T")[0];
+  const diff = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diff + offset * 7);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
 }
 
 function weekLabel(offset: number) {
