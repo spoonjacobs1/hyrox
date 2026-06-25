@@ -119,6 +119,19 @@ export default function Home() {
     });
   }, [week]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadFromDB(week).then(d => {
+        if (d) {
+          setOrder(d.order || [...DEFAULT_ORDER]);
+          setStatus(d.status || {});
+          setMetrics(d.metrics || {});
+        }
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [week]);
+
   const save = useCallback((o: string[], s: Record<string,string>, m: Record<string,Record<string,string>>) => {
     if (saveRef.current) clearTimeout(saveRef.current);
     setSaving(true);
