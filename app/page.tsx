@@ -103,33 +103,20 @@ export default function Home() {
   const [saving, setSaving] = useState(false);
   const saveRef = useRef<ReturnType<typeof setTimeout>|null>(null);
   const week = weekStart(offset);
+  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
+ useEffect(() => {
+    setOrder([...DEFAULT_ORDER]);
+    setStatus({});
+    setMetrics({});
+    setOpen(null);
     loadFromDB(week).then(d => {
       if (d) {
         setOrder(d.order || [...DEFAULT_ORDER]);
         setStatus(d.status || {});
         setMetrics(d.metrics || {});
-      } else {
-        setOrder([...DEFAULT_ORDER]);
-        setStatus({});
-        setMetrics({});
       }
-      setOpen(null);
     });
-  }, [week]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadFromDB(week).then(d => {
-        if (d) {
-          setOrder(d.order || [...DEFAULT_ORDER]);
-          setStatus(d.status || {});
-          setMetrics(d.metrics || {});
-        }
-      });
-    }, 3000);
-    return () => clearInterval(interval);
   }, [week]);
 
   const save = useCallback((o: string[], s: Record<string,string>, m: Record<string,Record<string,string>>) => {
